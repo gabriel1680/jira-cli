@@ -2,10 +2,11 @@ use anyhow::Result;
 use itertools::Itertools;
 use std::rc::Rc;
 
+use crate::dao::JiraDAO;
 use crate::models::Action;
-use crate::{dao::JiraDAO, ui::pages::get_column_string};
+use crate::ui::pages::page_helpers::get_column_string;
 
-use super::Page;
+use super::page::Page;
 
 pub struct HomePage {
     pub dao: Rc<JiraDAO>,
@@ -53,7 +54,7 @@ impl Page for HomePage {
 #[cfg(test)]
 mod tests {
 
-    use crate::{models::Epic, ui::page_test_utils::make_dao};
+    use crate::{models::Epic, ui::pages::page_test_utils::make_dao};
 
     use super::*;
 

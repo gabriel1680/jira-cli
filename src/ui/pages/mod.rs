@@ -1,25 +1,14 @@
 use std::rc::Rc;
 
-use anyhow::anyhow;
-use anyhow::Result;
-use itertools::Itertools;
-
 use crate::dao::JiraDAO;
-use crate::models::Action;
 
 mod epic_details;
-mod home_page;
+mod home;
+mod page;
 mod page_helpers;
 mod story_details;
 
-use page_helpers::*;
-
-pub trait Page {
-    fn draw_page(&self) -> Result<()>;
-    fn handle_input(&self, input: &str) -> Result<Option<Action>>;
-}
-
-pub mod page_test_utils {
+mod page_test_utils {
     use super::*;
     use crate::dao::test_utils::MockDB;
     use crate::models::{Epic, Story};

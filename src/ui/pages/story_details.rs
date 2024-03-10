@@ -1,10 +1,11 @@
 use anyhow::{anyhow, Result};
 use std::rc::Rc;
 
+use crate::dao::JiraDAO;
 use crate::models::Action;
-use crate::{dao::JiraDAO, ui::pages::get_column_string};
+use crate::ui::pages::page_helpers::get_column_string;
 
-use super::Page;
+use super::page::Page;
 
 pub struct StoryDetail {
     pub epic_id: u32,
@@ -55,7 +56,7 @@ impl Page for StoryDetail {
 mod tests {
     use crate::{
         models::{Epic, Story},
-        ui::{page_test_utils::make_dao, pages::epic_details::EpicDetail},
+        ui::pages::{epic_details::EpicDetail, page_test_utils::make_dao},
     };
 
     use super::*;
