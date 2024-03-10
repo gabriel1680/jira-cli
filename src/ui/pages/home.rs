@@ -80,30 +80,31 @@ mod tests {
         let dao = make_dao();
         let epic = Epic::new("".to_owned(), "".to_owned());
         let epic_id = dao.create_epic(epic).unwrap();
-        let page = HomePage { dao };
+        let sut = HomePage { dao };
 
-        let q = "q";
-        let c = "c";
         let valid_epic_id = epic_id.to_string();
-        let invalid_epic_id = "999";
-        let junk_input = "j983f2j";
-        let junk_input_with_valid_prefix = "q983f2j";
-        let input_with_trailing_white_spaces = "q\n";
+        let (q, c) = ("q", "c");
+        let (
+            invalid_epic_id,
+            junk_input,
+            junk_input_with_valid_prefix,
+            input_with_trailing_white_spaces,
+        ) = ("999", "j983f2j", "q983f2j", "q\n");
 
-        assert_eq!(page.handle_input(q).unwrap(), Some(Action::Exit));
-        assert_eq!(page.handle_input(c).unwrap(), Some(Action::CreateEpic));
+        assert_eq!(sut.handle_input(q).unwrap(), Some(Action::Exit));
+        assert_eq!(sut.handle_input(c).unwrap(), Some(Action::CreateEpic));
         assert_eq!(
-            page.handle_input(&valid_epic_id).unwrap(),
+            sut.handle_input(&valid_epic_id).unwrap(),
             Some(Action::NavigateToEpicDetail { epic_id: 1 })
         );
-        assert_eq!(page.handle_input(invalid_epic_id).unwrap(), None);
-        assert_eq!(page.handle_input(junk_input).unwrap(), None);
+        assert_eq!(sut.handle_input(invalid_epic_id).unwrap(), None);
+        assert_eq!(sut.handle_input(junk_input).unwrap(), None);
         assert_eq!(
-            page.handle_input(junk_input_with_valid_prefix).unwrap(),
+            sut.handle_input(junk_input_with_valid_prefix).unwrap(),
             None
         );
         assert_eq!(
-            page.handle_input(input_with_trailing_white_spaces).unwrap(),
+            sut.handle_input(input_with_trailing_white_spaces).unwrap(),
             None
         );
     }
