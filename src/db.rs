@@ -2,7 +2,7 @@ use std::fs;
 
 use anyhow::Result;
 
-use crate::models::{DBState, Story, Epic, Status};
+use crate::models::{DBState, Epic, Status, Story};
 
 trait Database {
     fn retrieve(&self) -> Result<DBState>;
@@ -10,7 +10,7 @@ trait Database {
 }
 
 struct JSONFileDatabase {
-    pub path: String
+    pub path: String,
 }
 
 impl Database for JSONFileDatabase {
@@ -36,70 +36,80 @@ mod tests {
 
         use super::*;
 
+        fn run_against_file_with(content: &str, test: impl Fn(String) -> ()) {
+            let mut tmpfile = tempfile::NamedTempFile::new().unwrap();
+            write!(tmpfile, "{}", content).unwrap();
+            let path = tmpfile
+                .path()
+                .to_str()
+                .expect("failed to convert tmpfile path to str")
+                .to_owned();
+            test(path);
+        }
+
         #[test]
         fn retrieve_should_fail_with_invalid_path() {
-            let db = JSONFileDatabase { path: "INVALID_PATH".to_owned() };
-            assert_eq!(db.retrieve().is_err(), true);
+            let sut = JSONFileDatabase {
+                path: "INVALID_PATH".to_owned(),
+            };
+            assert_eq!(sut.retrieve().is_err(), true);
         }
 
         #[test]
         fn retrieve_should_fail_with_invalid_json() {
-            let mut tmpfile = tempfile::NamedTempFile::new().unwrap();
-
-            let file_contents = r#"{ "last_item_id": 0 epics: {} stories {} }"#;
-            write!(tmpfile, "{}", file_contents).unwrap();
-
-            let db = JSONFileDatabase { path: tmpfile.path().to_str()
-                .expect("failed to convert tmpfile path to str").to_string() };
-
-            let result = db.retrieve();
-
-            assert_eq!(result.is_err(), true);
+            let test = |path: String| {
+                let sut = JSONFileDatabase { path };
+                assert_eq!(sut.retrieve().is_err(), true);
+            };
+            run_against_file_with(r#"{ "last_item_id": 0 epics: {} stories {} }"#, test);
         }
 
         #[test]
         fn retrieve_should_parse_json_file() {
-            let mut tmpfile = tempfile::NamedTempFile::new().unwrap();
-
-            let file_contents = r#"{ "last_item_id": 0, "epics": {}, "stories": {} }"#;
-            write!(tmpfile, "{}", file_contents).unwrap();
-
-            let db = JSONFileDatabase { path: tmpfile.path().to_str()
-                .expect("failed to convert tmpfile path to str").to_string() };
-
-            let result = db.retrieve();
-
-            assert_eq!(result.is_ok(), true);
+            let test = |path: String| {
+                let sut = JSONFileDatabase { path };
+                assert_eq!(sut.retrieve().is_ok(), true);
+            };
+            run_against_file_with(
+                r#"{ "last_item_id": 0, "epics": {}, "stories": {} }"#,
+                test,
+            );
         }
 
         #[test]
         fn persist_should_work() {
-            let mut tmpfile = tempfile::NamedTempFile::new().unwrap();
+            let test = |path: String| {
+                let db = JSONFileDatabase { path };
 
-            let file_contents = r#"{ "last_item_id": 0, "epics": {}, "stories": {} }"#;
-            write!(tmpfile, "{}", file_contents).unwrap();
+                let story = Story {
+                    name: "epic 1".to_owned(),
+                    description: "epic 1".to_owned(),
+                    status: Status::Open,
+                };
+                let epic = Epic {
+                    name: "epic 1".to_owned(),
+                    description: "epic 1".to_owned(),
+                    status: Status::Open,
+                    stories: vec![2],
+                };
 
-            let db = JSONFileDatabase { path: tmpfile.path().to_str()
-                .expect("failed to convert tmpfile path to str").to_string() };
+                let mut stories = HashMap::new();
+                stories.insert(2, story);
 
-            let story = Story { name: "epic 1".to_owned(), description: "epic 1".to_owned(), status: Status::Open };
-            let epic = Epic { name: "epic 1".to_owned(), description: "epic 1".to_owned(), status: Status::Open, stories: vec![2] };
+                let mut epics = HashMap::new();
+                epics.insert(1, epic);
 
-            let mut stories = HashMap::new();
-            stories.insert(2, story);
+                let state = DBState {
+                    last_item_id: 2,
+                    epics,
+                    stories,
+                };
 
-            let mut epics = HashMap::new();
-            epics.insert(1, epic);
-
-            let state = DBState { last_item_id: 2, epics, stories };
-
-            let write_result = db.persist(&state);
-            let read_result = db.retrieve().unwrap();
-
-            assert_eq!(write_result.is_ok(), true);
-            // TODO: fix this error by deriving the appropriate traits for DBState
-            assert_eq!(read_result, state);
+                assert_eq!(db.persist(&state).is_ok(), true);
+                assert_eq!(db.retrieve().unwrap(), state);
+            };
+            let json = r#"{ "last_item_id": 0, "epics": {}, "stories": {} }"#;
+            run_against_file_with(json, test);
         }
     }
 }
-
