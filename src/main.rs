@@ -1,5 +1,6 @@
+mod dao;
+mod json_file_database_adapter;
 mod models;
-mod db;
 
 fn main() {
     println!("WIP");
