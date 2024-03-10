@@ -1,6 +1,6 @@
 use std::fs;
 
-use anyhow::{Ok, Result};
+use anyhow::{anyhow, Ok, Result};
 
 use crate::models::{DBState, Epic, Status, Story};
 
@@ -35,8 +35,12 @@ impl JiraDAO {
     pub fn create_story(&self, story: Story, epic_id: u32) -> Result<u32> {
         let mut state = self.database.retrieve()?;
         let new_id = state.last_item_id + 1;
-        let mut epic = state.epics.get_mut(&epic_id).unwrap();
-        epic.stories.push(new_id);
+        state
+            .epics
+            .get_mut(&epic_id)
+            .ok_or_else(|| anyhow!("Couldn't find epic in database"))?
+            .stories
+            .push(new_id);
         state.stories.insert(new_id, story);
         state.last_item_id = new_id;
         self.database.persist(&state)?;
@@ -45,25 +49,42 @@ impl JiraDAO {
 
     pub fn delete_epic(&self, epic_id: u32) -> Result<()> {
         let mut state = self.database.retrieve()?;
-        let story_ids = state.epics.get(&epic_id).unwrap().stories.clone();
-        state.stories.retain(|story_id, _| !story_ids.contains(story_id));
-        state.epics.remove_entry(&epic_id).unwrap();
+        for story_id in &state
+            .epics
+            .get(&epic_id)
+            .ok_or_else(|| anyhow!("could not find epic in database!"))?
+            .stories
+        {
+            state.stories.remove(story_id);
+        }
+        state.epics.remove(&epic_id);
         self.database.persist(&state)?;
         Ok(())
     }
 
     pub fn delete_story(&self, epic_id: u32, story_id: u32) -> Result<()> {
         let mut state = self.database.retrieve()?;
-        let mut epic = state.epics.get_mut(&epic_id).unwrap();
-        epic.stories.retain(|story| *story != story_id);
-        state.stories.remove_entry(&story_id).unwrap();
+        let epic = state
+            .epics
+            .get_mut(&epic_id)
+            .ok_or_else(|| anyhow!("could not find epic in database!"))?;
+        let story_index = epic
+            .stories
+            .iter()
+            .position(|id| id == &story_id)
+            .ok_or_else(|| anyhow!("story id not found in epic stories vector"))?;
+        epic.stories.remove(story_index);
+        state.stories.remove(&story_id);
         self.database.persist(&state)?;
         Ok(())
     }
 
     pub fn update_epic_status(&self, epic_id: u32, status: Status) -> Result<()> {
         let mut state = self.database.retrieve()?;
-        let mut epic = state.epics.get_mut(&epic_id).unwrap();
+        let mut epic = state
+            .epics
+            .get_mut(&epic_id)
+            .ok_or_else(|| anyhow!("epic id not found"))?;
         epic.status = status;
         self.database.persist(&state)?;
         Ok(())
@@ -71,7 +92,10 @@ impl JiraDAO {
 
     pub fn update_story_status(&self, story_id: u32, status: Status) -> Result<()> {
         let mut state = self.database.retrieve()?;
-        let mut story = state.stories.get_mut(&story_id).unwrap();
+        let mut story = state
+            .stories
+            .get_mut(&story_id)
+            .ok_or_else(|| anyhow!("story not found"))?;
         story.status = status;
         self.database.persist(&state)?;
         Ok(())
@@ -168,14 +192,14 @@ mod tests {
             assert_eq!(db_state.epics.get(&id), Some(&epic));
         }
 
-        // #[test]
-        // fn create_story_should_error_if_invalid_epic_id() {
-        //     let db = make_sut();
-        //     let story = empty_story();
-        //     let non_existent_epic_id = 999;
-        //     let result = db.create_story(story, non_existent_epic_id);
-        //     assert_eq!(result.is_err(), true);
-        // }
+        #[test]
+        fn create_story_should_error_if_invalid_epic_id() {
+            let db = make_sut();
+            let story = empty_story();
+            let non_existent_epic_id = 999;
+            let result = db.create_story(story, non_existent_epic_id);
+            assert_eq!(result.is_err(), true);
+        }
 
         #[test]
         fn should_create_story() {
@@ -201,27 +225,22 @@ mod tests {
             assert_eq!(db_state.stories.get(&id), Some(&story));
         }
 
-        // #[test]
-        // fn delete_epic_should_error_if_invalid_epic_id() {
-        //     let db = make_sut();
-        //     let non_existent_epic_id = 999;
-        //     let result = db.delete_epic(non_existent_epic_id);
-        //     assert_eq!(result.is_err(), true);
-        // }
+        #[test]
+        fn delete_epic_should_error_if_invalid_epic_id() {
+            let db = make_sut();
+            let non_existent_epic_id = 999;
+            let result = db.delete_epic(non_existent_epic_id);
+            assert_eq!(result.is_err(), true);
+        }
 
         #[test]
         fn should_delete_epic() {
             let db = make_sut();
             let epic = empty_epic();
             let story = empty_story();
-            let result = db.create_epic(epic);
-            assert_eq!(result.is_ok(), true);
+            let epic_id = db.create_epic(epic).unwrap();
+            let story_id = db.create_story(story, epic_id).unwrap();
 
-            let epic_id = result.unwrap();
-            let result = db.create_story(story, epic_id);
-            assert_eq!(result.is_ok(), true);
-
-            let story_id = result.unwrap();
             let result = db.delete_epic(epic_id);
             assert_eq!(result.is_ok(), true);
 
@@ -232,42 +251,31 @@ mod tests {
             assert_eq!(db_state.stories.get(&story_id), None);
         }
 
-        // #[test]
-        // fn delete_story_should_error_if_invalid_epic_id() {
-        //     let db = make_sut();
-        //     let epic = empty_epic();
-        //     let story = empty_story();
+        #[test]
+        fn delete_story_should_error_if_invalid_epic_id() {
+            let db = make_sut();
+            let epic = empty_epic();
+            let story = empty_story();
+            let epic_id = db.create_epic(epic).unwrap();
+            let story_id = db.create_story(story, epic_id).unwrap();
+            let non_existent_epic_id = 999;
 
-        //     let result = db.create_epic(epic);
-        //     assert_eq!(result.is_ok(), true);
+            let result = db.delete_story(non_existent_epic_id, story_id);
+            assert_eq!(result.is_err(), true);
+        }
 
-        //     let epic_id = result.unwrap();
-        //     let result = db.create_story(story, epic_id);
-        //     assert_eq!(result.is_ok(), true);
+        #[test]
+        fn delete_story_should_error_if_story_not_found_in_epic() {
+            let db = make_sut();
+            let epic = empty_epic();
+            let story = empty_story();
+            let epic_id = db.create_epic(epic).unwrap();
+            db.create_story(story, epic_id).unwrap();
+            let non_existent_story_id = 999;
 
-        //     let story_id = result.unwrap();
-        //     let non_existent_epic_id = 999;
-        //     let result = db.delete_story(non_existent_epic_id, story_id);
-        //     assert_eq!(result.is_err(), true);
-        // }
-
-        // #[test]
-        // fn delete_story_should_error_if_story_not_found_in_epic() {
-        //     let db = make_sut();
-        //     let epic = empty_epic();
-        //     let story = empty_story();
-
-        //     let result = db.create_epic(epic);
-        //     assert_eq!(result.is_ok(), true);
-
-        //     let epic_id = result.unwrap();
-        //     let result = db.create_story(story, epic_id);
-        //     assert_eq!(result.is_ok(), true);
-
-        //     let non_existent_story_id = 999;
-        //     let result = db.delete_story(epic_id, non_existent_story_id);
-        //     assert_eq!(result.is_err(), true);
-        // }
+            let result = db.delete_story(epic_id, non_existent_story_id);
+            assert_eq!(result.is_err(), true);
+        }
 
         #[test]
         fn delete_story_should_work() {
@@ -275,14 +283,8 @@ mod tests {
             let epic = empty_epic();
             let story = empty_story();
 
-            let result = db.create_epic(epic);
-            assert_eq!(result.is_ok(), true);
-
-            let epic_id = result.unwrap();
-            let result = db.create_story(story, epic_id);
-            assert_eq!(result.is_ok(), true);
-
-            let story_id = result.unwrap();
+            let epic_id = db.create_epic(epic).unwrap();
+            let story_id = db.create_story(story, epic_id).unwrap();
             let result = db.delete_story(epic_id, story_id);
             assert_eq!(result.is_ok(), true);
 
@@ -301,23 +303,20 @@ mod tests {
             assert_eq!(db_state.stories.get(&story_id), None);
         }
 
-        // #[test]
-        // fn update_epic_status_should_error_if_invalid_epic_id() {
-        //     let db = make_sut();
-        //     let non_existent_epic_id = 999;
-        //     let result = db.update_epic_status(non_existent_epic_id, Status::Closed);
-        //     assert_eq!(result.is_err(), true);
-        // }
+        #[test]
+        fn update_epic_status_should_error_if_invalid_epic_id() {
+            let db = make_sut();
+            let non_existent_epic_id = 999;
+            let result = db.update_epic_status(non_existent_epic_id, Status::Closed);
+            assert_eq!(result.is_err(), true);
+        }
 
         #[test]
         fn update_epic_status_should_work() {
             let db = make_sut();
             let epic = empty_epic();
 
-            let result = db.create_epic(epic);
-            assert_eq!(result.is_ok(), true);
-
-            let epic_id = result.unwrap();
+            let epic_id = db.create_epic(epic).unwrap();
             let result = db.update_epic_status(epic_id, Status::Closed);
             assert_eq!(result.is_ok(), true);
 
@@ -325,13 +324,13 @@ mod tests {
             assert_eq!(db_state.epics.get(&epic_id).unwrap().status, Status::Closed);
         }
 
-        // #[test]
-        // fn update_story_status_should_error_if_invalid_story_id() {
-        //     let db = make_sut();
-        //     let non_existent_story_id = 999;
-        //     let result = db.update_story_status(non_existent_story_id, Status::Closed);
-        //     assert_eq!(result.is_err(), true);
-        // }
+        #[test]
+        fn update_story_status_should_error_if_invalid_story_id() {
+            let db = make_sut();
+            let non_existent_story_id = 999;
+            let result = db.update_story_status(non_existent_story_id, Status::Closed);
+            assert_eq!(result.is_err(), true);
+        }
 
         #[test]
         fn update_story_status_should_work() {
