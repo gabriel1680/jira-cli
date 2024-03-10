@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
-use itertools::Itertools;
-use anyhow::Result;
 use anyhow::anyhow;
+use anyhow::Result;
+use itertools::Itertools;
 
 use crate::dao::JiraDAO;
 use crate::models::Action;
@@ -185,18 +185,28 @@ mod tests {
     use crate::dao::test_utils::MockDB;
     use crate::models::{Epic, Story};
 
-    fn make_sut() -> HomePage {
-        let dao = make_dao();
-        HomePage { dao }
-    }
-
     fn make_dao() -> Rc<JiraDAO> {
         let database = Box::new(MockDB::new());
         Rc::new(JiraDAO::new(database))
     }
 
+    fn create_epic_and_story(dao: &JiraDAO) -> (u32, u32) {
+        let epic_id = dao
+            .create_epic(Epic::new("".to_owned(), "".to_owned()))
+            .unwrap();
+        let story_id = dao
+            .create_story(Story::new("".to_owned(), "".to_owned()), epic_id)
+            .unwrap();
+        (epic_id, story_id)
+    }
+
     mod home_page {
         use super::*;
+
+        fn make_sut() -> HomePage {
+            let dao = make_dao();
+            HomePage { dao }
+        }
 
         #[test]
         fn draw_page_should_not_throw_error() {
@@ -215,7 +225,7 @@ mod tests {
             let dao = make_dao();
             let epic = Epic::new("".to_owned(), "".to_owned());
             let epic_id = dao.create_epic(epic).unwrap();
-            let page = HomePage { dao: dao };
+            let page = HomePage { dao };
 
             let q = "q";
             let c = "c";
@@ -247,92 +257,86 @@ mod tests {
     mod epic_detail_page {
         use super::*;
 
+        fn make_sut(with_epic: Option<()>) -> EpicDetail {
+            let dao = make_dao();
+            match with_epic {
+                Some(()) => {
+                    let epic_id = dao
+                        .create_epic(Epic::new("".to_owned(), "".to_owned()))
+                        .unwrap();
+                    EpicDetail { epic_id, dao }
+                }
+                None => EpicDetail { epic_id: 999, dao },
+            }
+        }
+
         #[test]
         fn draw_page_should_not_throw_error() {
-            let dao = make_dao();
-            let epic_id = dao
-                .create_epic(Epic::new("".to_owned(), "".to_owned()))
-                .unwrap();
-
-            let page = EpicDetail { epic_id, dao: dao };
-            assert_eq!(page.draw_page().is_ok(), true);
+            let sut = make_sut(Some(()));
+            assert_eq!(sut.draw_page().is_ok(), true);
         }
 
         #[test]
         fn handle_input_should_not_throw_error() {
-            let dao = make_dao();
-            let epic_id = dao
-                .create_epic(Epic::new("".to_owned(), "".to_owned()))
-                .unwrap();
-
-            let page = EpicDetail { epic_id, dao: dao };
-            assert_eq!(page.handle_input("").is_ok(), true);
+            let sut = make_sut(Some(()));
+            assert_eq!(sut.handle_input("").is_ok(), true);
         }
 
         #[test]
         fn draw_page_should_throw_error_for_invalid_epic_id() {
-            let dao = make_dao();
-
-            let page = EpicDetail {
-                epic_id: 999,
-                dao: dao,
-            };
-            assert_eq!(page.draw_page().is_err(), true);
+            let sut = make_sut(None);
+            assert_eq!(sut.draw_page().is_err(), true);
         }
 
         #[test]
         fn handle_input_should_return_the_correct_actions() {
             let dao = make_dao();
-
             let epic_id = dao
                 .create_epic(Epic::new("".to_owned(), "".to_owned()))
                 .unwrap();
             let story_id = dao
                 .create_story(Story::new("".to_owned(), "".to_owned()), epic_id)
                 .unwrap();
-
-            let page = EpicDetail { epic_id, dao: dao };
-
-            let p = "p";
-            let u = "u";
-            let d = "d";
-            let c = "c";
-            let invalid_story_id = "999";
-            let junk_input = "j983f2j";
-            let junk_input_with_valid_prefix = "p983f2j";
-            let input_with_trailing_white_spaces = "p\n";
+            let sut = EpicDetail { epic_id, dao };
+            let (p, u, d, c) = ("p", "u", "d", "c");
+            let (
+                invalid_story_id,
+                junk_input,
+                junk_input_with_valid_prefix,
+                input_with_trailing_white_spaces,
+            ) = ("999", "j983f2j", "p983f2j", "p\n");
 
             assert_eq!(
-                page.handle_input(p).unwrap(),
+                sut.handle_input(p).unwrap(),
                 Some(Action::NavigateToPreviousPage)
             );
             assert_eq!(
-                page.handle_input(u).unwrap(),
+                sut.handle_input(u).unwrap(),
                 Some(Action::UpdateEpicStatus { epic_id: 1 })
             );
             assert_eq!(
-                page.handle_input(d).unwrap(),
+                sut.handle_input(d).unwrap(),
                 Some(Action::DeleteEpic { epic_id: 1 })
             );
             assert_eq!(
-                page.handle_input(c).unwrap(),
+                sut.handle_input(c).unwrap(),
                 Some(Action::CreateStory { epic_id: 1 })
             );
             assert_eq!(
-                page.handle_input(&story_id.to_string()).unwrap(),
+                sut.handle_input(&story_id.to_string()).unwrap(),
                 Some(Action::NavigateToStoryDetail {
                     epic_id: 1,
                     story_id: 2
                 })
             );
-            assert_eq!(page.handle_input(invalid_story_id).unwrap(), None);
-            assert_eq!(page.handle_input(junk_input).unwrap(), None);
+            assert_eq!(sut.handle_input(invalid_story_id).unwrap(), None);
+            assert_eq!(sut.handle_input(junk_input).unwrap(), None);
             assert_eq!(
-                page.handle_input(junk_input_with_valid_prefix).unwrap(),
+                sut.handle_input(junk_input_with_valid_prefix).unwrap(),
                 None
             );
             assert_eq!(
-                page.handle_input(input_with_trailing_white_spaces).unwrap(),
+                sut.handle_input(input_with_trailing_white_spaces).unwrap(),
                 None
             );
         }
@@ -341,108 +345,76 @@ mod tests {
     mod story_detail_page {
         use super::*;
 
-        #[test]
-        fn draw_page_should_not_throw_error() {
+        fn make_sut() -> StoryDetail {
             let dao = make_dao();
-
-            let epic_id = dao
-                .create_epic(Epic::new("".to_owned(), "".to_owned()))
-                .unwrap();
-            let story_id = dao
-                .create_story(Story::new("".to_owned(), "".to_owned()), epic_id)
-                .unwrap();
-
-            let page = StoryDetail {
+            let (epic_id, story_id) = create_epic_and_story(&dao);
+            StoryDetail {
                 epic_id,
                 story_id,
                 dao,
-            };
-            assert_eq!(page.draw_page().is_ok(), true);
+            }
+        }
+
+        #[test]
+        fn draw_page_should_not_throw_error() {
+            let sut = make_sut();
+            assert_eq!(sut.draw_page().is_ok(), true);
         }
 
         #[test]
         fn handle_input_should_not_throw_error() {
-            let dao = make_dao();
-
-            let epic_id = dao
-                .create_epic(Epic::new("".to_owned(), "".to_owned()))
-                .unwrap();
-            let story_id = dao
-                .create_story(Story::new("".to_owned(), "".to_owned()), epic_id)
-                .unwrap();
-
-            let page = StoryDetail {
-                epic_id,
-                story_id,
-                dao,
-            };
-            assert_eq!(page.handle_input("").is_ok(), true);
+            let sut = make_sut();
+            assert_eq!(sut.handle_input("").is_ok(), true);
         }
 
         #[test]
         fn draw_page_should_throw_error_for_invalid_story_id() {
             let dao = make_dao();
-
             let epic_id = dao
                 .create_epic(Epic::new("".to_owned(), "".to_owned()))
                 .unwrap();
             let _ = dao
                 .create_story(Story::new("".to_owned(), "".to_owned()), epic_id)
                 .unwrap();
-
-            let page = StoryDetail {
+            let sut = StoryDetail {
                 epic_id,
                 story_id: 999,
                 dao,
             };
-            assert_eq!(page.draw_page().is_err(), true);
+            assert_eq!(sut.draw_page().is_err(), true);
         }
 
         #[test]
         fn handle_input_should_return_the_correct_actions() {
-            let dao = make_dao();
+            let sut = make_sut();
+            let story_id = sut.story_id;
+            let epic_id = sut.epic_id;
 
-            let epic_id = dao
-                .create_epic(Epic::new("".to_owned(), "".to_owned()))
-                .unwrap();
-            let story_id = dao
-                .create_story(Story::new("".to_owned(), "".to_owned()), epic_id)
-                .unwrap();
-
-            let page = StoryDetail {
-                epic_id,
-                story_id,
-                dao,
-            };
-
-            let p = "p";
-            let u = "u";
-            let d = "d";
+            let (p, u, d) = ("p", "u", "d");
+            let (junk_input, junk_input_with_valid_prefix, input_with_trailing_white_spaces) =
+                ("j983f2j", "p983f2j", "p\n");
             let some_number = "1";
-            let junk_input = "j983f2j";
-            let junk_input_with_valid_prefix = "p983f2j";
-            let input_with_trailing_white_spaces = "p\n";
 
             assert_eq!(
-                page.handle_input(p).unwrap(),
+                sut.handle_input(p).unwrap(),
                 Some(Action::NavigateToPreviousPage)
             );
             assert_eq!(
-                page.handle_input(u).unwrap(),
+                sut.handle_input(u).unwrap(),
                 Some(Action::UpdateStoryStatus { story_id })
             );
             assert_eq!(
-                page.handle_input(d).unwrap(),
+                sut.handle_input(d).unwrap(),
                 Some(Action::DeleteStory { epic_id, story_id })
             );
-            assert_eq!(page.handle_input(some_number).unwrap(), None);
-            assert_eq!(page.handle_input(junk_input).unwrap(), None);
+            assert_eq!(sut.handle_input(some_number).unwrap(), None);
+            assert_eq!(sut.handle_input(junk_input).unwrap(), None);
             assert_eq!(
-                page.handle_input(junk_input_with_valid_prefix).unwrap(),
+                sut.handle_input(junk_input_with_valid_prefix).unwrap(),
                 None
             );
             assert_eq!(
-                page.handle_input(input_with_trailing_white_spaces).unwrap(),
+                sut.handle_input(input_with_trailing_white_spaces).unwrap(),
                 None
             );
         }
