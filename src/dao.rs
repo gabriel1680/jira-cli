@@ -12,6 +12,10 @@ pub struct JiraDAO {
 }
 
 impl JiraDAO {
+    pub fn new(database: Box<dyn Database>) -> JiraDAO {
+        JiraDAO { database }
+    }
+
     pub fn read_db(&self) -> Result<DBState> {
         self.database.retrieve()
     }
