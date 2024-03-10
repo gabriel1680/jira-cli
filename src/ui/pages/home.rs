@@ -3,7 +3,7 @@ use itertools::Itertools;
 use std::rc::Rc;
 
 use crate::dao::JiraDAO;
-use crate::models::Action;
+use crate::ui::actions::Action;
 use crate::ui::pages::page_helpers::get_column_string;
 
 use super::page::Page;

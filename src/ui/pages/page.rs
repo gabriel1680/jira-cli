@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use crate::models::Action;
+use crate::ui::actions::Action;
 
 pub trait Page {
     fn draw_page(&self) -> Result<()>;

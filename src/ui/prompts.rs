@@ -1,6 +1,6 @@
 use crate::{
-    io_utils::get_user_input,
     models::{Epic, Status, Story},
+    ui::io_utils::get_user_input,
 };
 
 pub struct Prompts {
