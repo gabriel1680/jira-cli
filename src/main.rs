@@ -12,6 +12,8 @@ mod json_file_database_adapter;
 mod models;
 mod navigator;
 mod ui;
+mod application;
+mod domain;
 
 fn main() {
     let database_adapter = JSONFileJiraDAOAdapter {
