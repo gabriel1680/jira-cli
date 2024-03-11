@@ -1,5 +1,4 @@
-use super::Status;
-use anyhow::{anyhow, Ok, Result};
+use super::{DomainError, Status};
 
 pub struct Epic {
     id: u32,
@@ -20,43 +19,55 @@ impl Epic {
         }
     }
 
-    pub fn start(&mut self) -> Result<()> {
+    pub fn start(&mut self) -> Result<(), DomainError> {
         match &self.status {
             Status::Open | Status::InProgress => {
                 self.status = Status::InProgress;
                 Ok(())
             }
-            status => Err(anyhow!("Epic with status {} cannot be started", status)),
+            status => Err(DomainError(format!(
+                "Epic with status {} cannot be started",
+                status
+            ))),
         }
     }
 
-    pub fn close(&mut self) -> Result<()> {
+    pub fn close(&mut self) -> Result<(), DomainError> {
         match &self.status {
             Status::Open | Status::InProgress => {
                 self.status = Status::Closed;
                 Ok(())
             }
-            status => Err(anyhow!("Epic with status {} cannot be closed", status)),
+            status => Err(DomainError(format!(
+                "Epic with status {} cannot be closed",
+                status
+            ))),
         }
     }
 
-    pub fn resolve(&mut self) -> Result<()> {
+    pub fn resolve(&mut self) -> Result<(), DomainError> {
         match &self.status {
             Status::Open | Status::InProgress => {
                 self.status = Status::Resolved;
                 Ok(())
             }
-            status => Err(anyhow!("Epic with status {} cannot be resolved", status)),
+            status => Err(DomainError(format!(
+                "Epic with status {} cannot be resolved",
+                status
+            ))),
         }
     }
 
-    pub fn open(&mut self) -> Result<()> {
+    pub fn open(&mut self) -> Result<(), DomainError> {
         match &self.status {
             Status::Closed | Status::Resolved => {
                 self.status = Status::Open;
                 Ok(())
             }
-            status => Err(anyhow!("Epic with status {} cannot be opened", status)),
+            status => Err(DomainError(format!(
+                "Epic with status {} cannot be opened",
+                status
+            ))),
         }
     }
 

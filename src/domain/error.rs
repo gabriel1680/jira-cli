@@ -1,0 +1,1 @@
+pub struct DomainError(pub String);
