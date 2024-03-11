@@ -77,7 +77,7 @@ impl JiraDAO {
 
     pub fn update_epic_status(&self, epic_id: u32, status: Status) -> Result<()> {
         let mut state = self.database.retrieve()?;
-        let mut epic = state
+        let epic = state
             .epics
             .get_mut(&epic_id)
             .ok_or_else(|| anyhow!("epic id not found"))?;
@@ -88,7 +88,7 @@ impl JiraDAO {
 
     pub fn update_story_status(&self, story_id: u32, status: Status) -> Result<()> {
         let mut state = self.database.retrieve()?;
-        let mut story = state
+        let story = state
             .stories
             .get_mut(&story_id)
             .ok_or_else(|| anyhow!("story not found"))?;
