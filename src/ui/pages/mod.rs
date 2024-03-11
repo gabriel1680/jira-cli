@@ -8,6 +8,11 @@ mod page;
 mod page_helpers;
 mod story_details;
 
+pub use page::*;
+pub use home::*;
+pub use epic_details::*;
+pub use story_details::*;
+
 mod page_test_utils {
     use super::*;
     use crate::dao::test_utils::MockDB;
