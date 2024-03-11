@@ -5,7 +5,7 @@ use anyhow::{Ok, Result};
 use crate::dao::Database;
 use crate::models::{DBState, Epic, Status, Story};
 
-struct JSONFileJiraDAOAdapter {
+pub struct JSONFileJiraDAOAdapter {
     pub path: String,
 }
 
