@@ -1,10 +1,10 @@
-use super::{DomainError, Status};
+use super::{Status, StatusState};
 
 pub struct Epic {
     id: u32,
     name: String,
     description: String,
-    status: Status,
+    state: StatusState,
     stories: Vec<u32>,
 }
 
@@ -14,60 +14,8 @@ impl Epic {
             id,
             name,
             description,
-            status: Status::Open,
+            state: StatusState::new(Status::Open),
             stories: vec![],
-        }
-    }
-
-    pub fn start(&mut self) -> Result<(), DomainError> {
-        match &self.status {
-            Status::Open | Status::InProgress => {
-                self.status = Status::InProgress;
-                Ok(())
-            }
-            status => Err(DomainError(format!(
-                "Epic with status {} cannot be started",
-                status
-            ))),
-        }
-    }
-
-    pub fn close(&mut self) -> Result<(), DomainError> {
-        match &self.status {
-            Status::Open | Status::InProgress => {
-                self.status = Status::Closed;
-                Ok(())
-            }
-            status => Err(DomainError(format!(
-                "Epic with status {} cannot be closed",
-                status
-            ))),
-        }
-    }
-
-    pub fn resolve(&mut self) -> Result<(), DomainError> {
-        match &self.status {
-            Status::Open | Status::InProgress => {
-                self.status = Status::Resolved;
-                Ok(())
-            }
-            status => Err(DomainError(format!(
-                "Epic with status {} cannot be resolved",
-                status
-            ))),
-        }
-    }
-
-    pub fn open(&mut self) -> Result<(), DomainError> {
-        match &self.status {
-            Status::Closed | Status::Resolved => {
-                self.status = Status::Open;
-                Ok(())
-            }
-            status => Err(DomainError(format!(
-                "Epic with status {} cannot be opened",
-                status
-            ))),
         }
     }
 
@@ -90,11 +38,6 @@ mod epic_test_fixtures {
             Self {
                 epic: Epic::new(id, name, description),
             }
-        }
-
-        pub fn with_status(mut self, status: Status) -> Self {
-            self.epic.status = status;
-            self
         }
 
         pub fn with_stories(mut self, stories: Vec<u32>) -> Self {
@@ -121,46 +64,7 @@ mod tests {
     #[test]
     fn new_should_start_with_open_status() {
         let sut = default_builder().build();
-        assert_eq!(sut.status, Status::Open);
-    }
-
-    #[test]
-    fn start_should_work() {
-        let mut sut = default_builder().build();
-        assert_eq!(sut.start().is_ok(), true);
-        assert_eq!(sut.status, Status::InProgress);
-    }
-
-    #[test]
-    fn start_should_fail() {
-        let mut sut = default_builder().with_status(Status::Closed).build();
-        assert_eq!(sut.start().is_err(), true);
-    }
-
-    #[test]
-    fn close_should_work() {
-        let mut sut = default_builder().build();
-        assert_eq!(sut.close().is_ok(), true);
-        assert_eq!(sut.status, Status::Closed);
-    }
-
-    #[test]
-    fn close_should_fail() {
-        let mut sut = default_builder().with_status(Status::Resolved).build();
-        assert_eq!(sut.close().is_err(), true);
-    }
-
-    #[test]
-    fn resolve_should_work() {
-        let mut sut = default_builder().build();
-        assert_eq!(sut.resolve().is_ok(), true);
-        assert_eq!(sut.status, Status::Resolved);
-    }
-
-    #[test]
-    fn resolve_should_fail() {
-        let mut sut = default_builder().with_status(Status::Closed).build();
-        assert_eq!(sut.start().is_err(), true);
+        assert_eq!(sut.state.get_status(), Status::Open);
     }
 
     #[test]
