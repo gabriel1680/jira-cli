@@ -1,11 +1,15 @@
 mod epic;
-mod story;
-mod status;
+mod epic_repository;
 mod error;
 mod state;
+mod status;
+mod story;
+mod story_repository;
 
 pub use epic::*;
-pub use story::*;
+pub use epic_repository::*;
 pub use error::*;
-pub use status::*;
 pub use state::*;
+pub use status::*;
+pub use story::*;
+pub use story_repository::*;
