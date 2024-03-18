@@ -1,11 +1,13 @@
+use std::{collections::HashMap, rc::Rc};
+
 use crate::domain::{Epic, EpicRepository};
 
 pub struct CreateEpic {
-    repository: Box<dyn EpicRepository>,
+    repository: Rc<dyn EpicRepository>,
 }
 
 impl CreateEpic {
-    pub fn new(repository: Box<dyn EpicRepository>) -> Self {
+    pub fn new(repository: Rc<dyn EpicRepository>) -> Self {
         Self { repository }
     }
 

@@ -1,10 +1,10 @@
 use super::{Status, StatusState};
 
 pub struct Epic {
-    id: u32,
-    name: String,
-    description: String,
-    state: StatusState,
+    pub id: u32,
+    pub name: String,
+    pub description: String,
+    pub state: StatusState,
     stories: Vec<u32>,
 }
 
@@ -23,6 +23,16 @@ impl Epic {
         if !self.stories.contains(&story_id) {
             self.stories.push(story_id);
         }
+    }
+
+    pub fn remove_story(&mut self, story_id: u32) {
+        if self.stories.contains(&story_id) {
+            let idx = self.stories.iter().position(|s_id| *s_id == story_id).unwrap();
+            let _ = self.stories.remove(idx);
+        }
+    }
+    pub fn get_stories(&self) -> Vec<u32> {
+        self.stories.clone()
     }
 }
 
@@ -83,5 +93,17 @@ mod tests {
 
         sut.add_story(2);
         assert_eq!(sut.stories, vec![1, 2]);
+    }
+
+    #[test]
+    fn remove_story() {
+        let mut sut = default_builder().with_stories(vec![1]).build();
+        let empty_vec = Vec::<u32>::new();
+
+        sut.remove_story(1);
+        assert_eq!(sut.stories, empty_vec);
+
+        sut.remove_story(2);
+        assert_eq!(sut.stories, empty_vec);
     }
 }

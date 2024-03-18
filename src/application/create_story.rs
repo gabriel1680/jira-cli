@@ -3,13 +3,13 @@ use std::rc::Rc;
 use crate::domain::{EpicRepository, Story, StoryRepository};
 
 pub struct CreateStory {
-    repository: Box<dyn StoryRepository>,
+    repository: Rc<dyn StoryRepository>,
     epic_repository: Rc<dyn EpicRepository>,
 }
 
 impl CreateStory {
     pub fn new(
-        repository: Box<dyn StoryRepository>,
+        repository: Rc<dyn StoryRepository>,
         epic_repository: Rc<dyn EpicRepository>,
     ) -> Self {
         Self {
