@@ -22,12 +22,13 @@ impl Page for StoryDetail {
             .ok_or_else(|| anyhow!("could not find story!"))?;
 
         println!("------------------------------ STORY ------------------------------");
-        println!("  id  |     name     |         description         |    status    ");
+        println!(" id |     name     |         description         |    status    ");
 
-        let id_col = get_column_string(&self.story_id.to_string(), 11);
-        let name_col = get_column_string(&story.name, 32);
+        let id_col = get_column_string(&self.story_id.to_string(), 3);
+        let name_col = get_column_string(&story.name, 12);
+        let description_col = get_column_string(&story.description.to_string(), 27);
         let status_col = get_column_string(&story.status.to_string(), 17);
-        println!("{} | {} | {}", id_col, name_col, status_col);
+        println!("{} | {} | {} | {}", id_col, name_col, description_col, status_col);
 
         println!();
         println!();

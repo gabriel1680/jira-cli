@@ -22,12 +22,12 @@ impl Page for EpicDetail {
             .ok_or_else(|| anyhow!("could not find epic!"))?;
 
         println!("------------------------------ EPIC ------------------------------");
-        println!("  id  |     name     |         description         |    status    ");
+        println!(" id |     name     |         description         |    status    ");
 
-        let id_col = get_column_string(&self.epic_id.to_string(), 11);
-        let name_col = get_column_string(&epic.name, 32);
-        let description_col = get_column_string(&epic.description, 32);
-        let status_col = get_column_string(&epic.status.to_string(), 17);
+        let id_col = get_column_string(&self.epic_id.to_string(), 3);
+        let name_col = get_column_string(&epic.name, 12);
+        let description_col = get_column_string(&epic.description, 27);
+        let status_col = get_column_string(&epic.status.to_string(), 15);
         println!(
             "{} | {} | {} | {}",
             id_col, name_col, description_col, status_col
